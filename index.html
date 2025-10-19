@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Game Panel Overlay</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0d1117;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .login, .panel {
+      background: #161b22;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #000;
+      width: 320px;
+    }
+    h2 {
+      text-align: center;
+      color: #00ffff;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin: 6px 0;
+      border: none;
+      border-radius: 5px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #00bfff;
+      border: none;
+      border-radius: 5px;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    button:hover {
+      background: #008cff;
+    }
+    .function {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 8px 0;
+    }
+    .slider {
+      width: 100%;
+    }
+    .hidden {
+      display: none;
+    }
+
+    /* Overlay vòng tròn FOV */
+    #overlayFov {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      border: 1.5px solid #00ff00;
+      border-radius: 50%;
+      width: 100px;
+      height: 100px;
+      pointer-events: none;
+      z-index: 9999;
+      background: transparent;
+      display: none;
+    }
+
+    /* Hiệu ứng đèn nhấp nháy xanh */
+    @keyframes glow {
+      0% { text-shadow: 0 0 5px #00ff99, 0 0 10px #00ff99, 0 0 20px #00ff99; color: #00ffaa; }
+      50% { text-shadow: 0 0 10px #00ffaa, 0 0 25px #00ffaa, 0 0 35px #00ffaa; color: #aaffff; }
+      100% { text-shadow: 0 0 5px #00ff99, 0 0 10px #00ff99, 0 0 20px #00ff99; color: #00ffaa; }
+    }
+    #runStatus {
+      text-align: center;
+      font-size: 14px;
+      margin-top: 10px;
+      min-height: 24px;
+    }
+    .active-glow {
+      animation: glow 1.5s infinite ease-in-out;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <!-- Giao diện đăng nhập -->
+  <div class="login" id="loginBox">
+    <h2>Đăng nhập</h2>
+    <input type="text" id="username" placeholder="Tên đăng nhập">
+    <input type="password" id="password" placeholder="Mật khẩu">
+    <button onclick="login()">Đăng nhập</button>
+    <p id="loginStatus" style="color:red;text-align:center;"></p>
+  </div>
+
+  <!-- Giao diện panel chức năng -->
+  <div class="panel hidden" id="panelBox">
+    <h2>Menu Chức Năng</h2>
+    <div class="function"><span>1. Aimbot</span><input type="checkbox" id="aimbot"></div>
+    <div class="function"><span>2. Aimbody</span><input type="checkbox" id="aimbody"></div>
+    <div class="function"><span>3. Aimkill</span><input type="checkbox" id="aimkill"></div>
+    <div class="function"><span>4. ESP</span><input type="checkbox" id="esp"></div>
+    <div class="function"><span>5. Đạn thẳng</span><input type="checkbox" id="danthang"></div>
+    <div class="function"><span>6. Không nở tâm</span><input type="checkbox" id="khongno"></div>
+    <div class="function"><span>7. Aim visible</span><input type="checkbox" id="aimvisible"></div>
+    <div class="function">
+      <span>8. Aim FOV</span>
+      <input type="range" min="30" max="200" value="100" class="slider" id="fovRange">
+    </div>
+    <p>Độ FOV hiện tại: <span id="fovValue">100</span>°</p>
+    <div class="function"><span>9. ESP Name</span><input type="checkbox" id="espname"></div>
+    <div class="function"><span>10. Antiband</span><input type="checkbox" id="antiband"></div>
+
+    <button onclick="runFunctions()">Chạy</button>
+    <button onclick="hideCircle()">Ẩn vòng tròn</button>
+    <button onclick="stopFunctions()">Tắt</button>
+    <button onclick="togglePanel()">Ẩn/Hiện Menu</button>
+    <p id="runStatus"></p>
+  </div>
+
+  <!-- Overlay hình tròn -->
+  <div id="overlayFov"></div>
+
+  <script>
+    const USER = "admin";
+    const PASS = "0102";
+    let overlayActive = false;
+    let runningTimeout = null;
+
+    const overlay = document.getElementById("overlayFov");
+    const fov = document.getElementById("fovRange");
+    const val = document.getElementById("fovValue");
+    const runStatus = document.getElementById("runStatus");
+
+    function login() {
+      const user = document.getElementById("username").value;
+      const pass = document.getElementById("password").value;
+      const status = document.getElementById("loginStatus");
+      if (user === USER && pass === PASS) {
+        document.getElementById("loginBox").classList.add("hidden");
+        document.getElementById("panelBox").classList.remove("hidden");
+      } else {
+        status.textContent = "Sai tài khoản hoặc mật khẩu!";
+      }
+    }
+
+    function togglePanel() {
+      const panel = document.getElementById("panelBox");
+      panel.classList.toggle("hidden");
+    }
+
+    fov.addEventListener("input", () => {
+      val.textContent = fov.value;
+      overlay.style.width = fov.value + "px";
+      overlay.style.height = fov.value + "px";
+    });
+
+    function runFunctions() {
+      overlay.style.display = "block";
+      overlayActive = true;
+
+      const features = [
+        { id: "aimbot", name: "Aimbot" },
+        { id: "aimbody", name: "Aimbody" },
+        { id: "aimkill", name: "Aimkill" },
+        { id: "esp", name: "ESP" },
+        { id: "danthang", name: "Đạn thẳng" },
+        { id: "khongno", name: "Không nở tâm" },
+        { id: "aimvisible", name: "Aim visible" },
+        { id: "espname", name: "ESP Name" },
+        { id: "antiband", name: "Antiband" }
+      ];
+
+      const active = features.filter(f => document.getElementById(f.id).checked).map(f => f.name);
+
+      if (active.length > 0) {
+        runStatus.innerHTML = `🟢 <b>Đang chạy:</b> ${active.join(", ")}`;
+        runStatus.classList.add("active-glow");
+
+        if (runningTimeout) clearTimeout(runningTimeout);
+        runningTimeout = setTimeout(() => {
+          runStatus.innerHTML = `✅ <b>Chạy thành công!</b>`;
+          runStatus.classList.remove("active-glow");
+        }, 30000); // 30 giây
+      } else {
+        runStatus.innerHTML = `⚠️ <b>Chưa bật chức năng nào!</b>`;
+        runStatus.classList.remove("active-glow");
+      }
+    }
+
+    function hideCircle() {
+      overlay.style.display = "none";
+      runStatus.textContent = "Vòng tròn FOV đã ẩn tạm!";
+      runStatus.classList.remove("active-glow");
+      if (runningTimeout) clearTimeout(runningTimeout);
+    }
+
+    function stopFunctions() {
+      overlay.style.display = "none";
+      overlayActive = false;
+      runStatus.textContent = "Đã tắt toàn bộ hiệu ứng.";
+      runStatus.classList.remove("active-glow");
+      if (runningTimeout) clearTimeout(runningTimeout);
+    }
+  </script>
+</body>
+</html>
